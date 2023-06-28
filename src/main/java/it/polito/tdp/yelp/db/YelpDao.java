@@ -5,7 +5,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+
+import it.polito.tdp.yelp.model.Adiacenza;
 import it.polito.tdp.yelp.model.Business;
 import it.polito.tdp.yelp.model.Review;
 import it.polito.tdp.yelp.model.User;
@@ -13,15 +18,16 @@ import it.polito.tdp.yelp.model.User;
 public class YelpDao {
 	
 	
-	public List<Business> getAllBusiness(){
+	public void getAllBusiness(Map<String, Business> idMap){
 		String sql = "SELECT * FROM Business";
-		List<Business> result = new ArrayList<Business>();
+		
 		Connection conn = DBConnect.getConnection();
 
 		try {
 			PreparedStatement st = conn.prepareStatement(sql);
 			ResultSet res = st.executeQuery();
 			while (res.next()) {
+				if(!idMap.containsKey(res.getString("business_id"))) {
 
 				Business business = new Business(res.getString("business_id"), 
 						res.getString("full_address"),
@@ -35,16 +41,19 @@ public class YelpDao {
 						res.getDouble("longitude"),
 						res.getString("state"),
 						res.getDouble("stars"));
-				result.add(business);
+				idMap.put(res.getString("business_id"), business);
+				}
+				
 			}
 			res.close();
 			st.close();
 			conn.close();
-			return result;
+			
 			
 		} catch (SQLException e) {
 			e.printStackTrace();
-			return null;
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
 		}
 	}
 	
@@ -110,6 +119,54 @@ public class YelpDao {
 			return null;
 		}
 	}
+
+		
+	public List<String> getAllCitta() {
+		String sql = "SELECT DISTINCT City FROM Business order by City ASC";
+		List<String> result = new ArrayList<>();
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
+			while(res.next()) {
+				result.add(res.getString("City"));
+			}
+			conn.close();
+			return result;
+		} catch (SQLException e) {
+			
+			e.printStackTrace();
+			throw new RuntimeException("Errore nel DB",e);
+		}
+	}
+
+	public List<Business> getVertici(String citta, Map<String, Business> idMap) {
+		String sql = "SELECT DISTINCT business_id as id "
+				+ "FROM business "
+				+ "WHERE city = ? ";
+		List<Business> result = new LinkedList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1,citta);
+			ResultSet rs = st.executeQuery();
+			while (rs.next()) {
+				result.add(idMap.get(rs.getString("id")));
+			}
+			
+			rs.close();
+			st.close();
+			conn.close();
+			return result;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+
+	
 	
 	
 }
